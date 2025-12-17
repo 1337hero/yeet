@@ -1,0 +1,114 @@
+/* Yeet Default */
+/* Transparent for compositor blur (Hyprland/Sway) */
+/* Colors based on Catppuccin Macchiato */
+
+
+/* === Colors === */
+@define-color text-primary hsl(227deg, 68%, 88%);
+@define-color text-secondary hsl(228deg, 39%, 80%);
+@define-color text-muted hsl(228deg, 15%, 57%);
+@define-color text-placeholder hsl(230deg, 12%, 49%);
+@define-color bg-selected hsl(231deg, 16%, 34%);
+@define-color bg-hover hsl(230deg, 19%, 26%);
+@define-color bg-window hsl(233deg, 23%, 15%);
+@define-color bg-input hsl(236deg, 23%, 12%);
+@define-color caret hsl(105deg, 48%, 72%);
+@define-color bg-shortcut hsl(267deg, 83%, 80%);
+@define-color text-shortcut hsl(236deg, 23%, 12%);
+
+/* === Global Reset === */
+* {
+    all: unset;
+    outline: none;
+    box-shadow: none;
+}
+
+/* === Window - semi-transparent for compositor blur === */
+.yeet-window {
+    background-color: alpha(@bg-window, 0.90);
+    border-radius: 12px;
+}
+
+/* === Container === */
+.yeet-container {
+    background-color: transparent;
+    padding: 8px;
+}
+
+/* === Search Entry === */
+.yeet-entry {
+    background-color: alpha(@bg-input, 0.6);
+    color: @text-primary;
+    font-size: 24px;
+    font-family: system-ui, sans-serif;
+    font-weight: 300;
+    padding: 16px 18px;
+    margin: 4px;
+    border-radius: 8px;
+    caret-color: @caret;
+}
+
+.yeet-entry text {
+    background: transparent;
+    color: @text-primary;
+}
+
+.yeet-entry placeholder {
+    color: @text-placeholder;
+}
+
+/* === List === */
+.yeet-list {
+    background-color: transparent;
+    padding: 4px;
+}
+
+/* === List Rows === */
+.yeet-row {
+    background-color: transparent;
+    border-radius: 8px;
+    margin: 2px 4px;
+}
+
+.yeet-row:selected {
+    background-color: alpha(@bg-selected, 0.8);
+}
+
+.yeet-row:hover:not(:selected) {
+    background-color: alpha(@bg-hover, 0.5);
+}
+
+.yeet-row-content {
+    background: transparent;
+}
+
+/* === App Info === */
+.yeet-icon {
+    opacity: 0.95;
+}
+
+.yeet-app-name {
+    color: @text-primary;
+    font-size: 15px;
+    font-weight: 500;
+    font-family: system-ui, sans-serif;
+}
+
+.yeet-app-desc {
+    color: @text-secondary;
+    font-size: 12px;
+    font-weight: 400;
+    font-family: system-ui, sans-serif;
+}
+
+/* === Keyboard Shortcuts === */
+.yeet-shortcut {
+    color: @text-shortcut;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: system-ui, sans-serif;
+    padding: 4px 8px;
+    background-color: alpha(@bg-shortcut, 0.6);
+    border-radius: 4px;
+    margin-left: 8px;
+}

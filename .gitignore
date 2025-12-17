@@ -1,0 +1,46 @@
+#1337Hero's Overkill Git Ignore!
+
+# Rust / Cargo
+/target/
+**/*.rs.bk
+
+# Editor backup files
+*.swp
+*.swo
+*~
+\#*\#
+.#*
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Debug
+*.pdb
+
+# Misc
+._*
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+.Spotlight-V100
+.Trashes
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+#AI Agents
+.claude
+CLAUDE.md
+GEMINI.md
