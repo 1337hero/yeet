@@ -5,6 +5,8 @@
 
 Hey 👋 I'm [@1337Hero](https://github.com/1337hero) and this is Yeet! A fast, minimal app launcher for Wayland. That's it.
 
+![Yeet!](yeet.png)
+
 ## What Yeet Is
 
 Yeet launches apps. That's it.
