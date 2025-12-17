@@ -17,8 +17,17 @@ build:
     cargo build
 
 # Build optimized release
-release:
+build-release:
     cargo build --release
+
+# Bump version, commit, tag, and push
+release version:
+    sed -i 's/^version = ".*"/version = "{{version}}"/' Cargo.toml
+    cargo check
+    git add Cargo.toml
+    git commit -m "Bump version to {{version}}"
+    git tag v{{version}}
+    git push origin main v{{version}}
 
 # Run all checks (format, lint, test)
 check:
