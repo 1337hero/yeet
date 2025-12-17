@@ -2,7 +2,7 @@
 pkgname=yeet-git
 pkgver=0.1.0
 pkgrel=1
-pkgdesc="A fast, minimal, configurable app launcher for Linux"
+pkgdesc="A fast, minimal, configurable app launcher for Wayland"
 arch=('x86_64')
 url="https://github.com/1337hero/yeet"
 license=('GPL3')
@@ -15,8 +15,11 @@ sha256sums=('SKIP')
 
 pkgver() {
     cd yeet
-    git describe --long --tags 2>/dev/null | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' || \
-    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+    if git describe --tags &>/dev/null; then
+        git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+    else
+        printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+    fi
 }
 
 build() {
