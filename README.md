@@ -21,10 +21,6 @@ Yeet launches apps. That's it.
 
 Yeet is not trying to be an all-in-one tool. No clipboard manager, no calculator, no file browser, no emoji picker, no websearch, no plugins. If you want those, check out [walker](https://github.com/abenz1267/walker) or [wofi](https://hg.sr.ht/~scoopta/wofi).
 
-## Screenshot
-
-_Coming soon_
-
 ## Installation
 
 ### Arch Linux (AUR)
@@ -52,7 +48,9 @@ yeet
 
 - Type to search
 - `Enter` — Launch selected app
-- `Up/Down` or `Ctrl+j/k` — Navigate results
+- `Up/Down` — Navigate results
+- `Scroll` / `Trackpad` — Navigate results
+- `Alt+1-9` — Quick launch by position
 - `Escape` — Close
 
 Bind it to a key in your compositor (e.g., `Super+Space` in Hyprland/Sway).
@@ -65,29 +63,39 @@ Config lives in `~/.config/yeet/`. Yeet ships with sensible defaults — only ov
 
 ```toml
 [general]
-max_results = 8
+monitor = 0           # Show on specific monitor (0 = primary)
+max_results = 8       # Max results when searching
+initial_results = 8   # Results shown before typing (0 = just search bar)
 terminal = "alacritty"
 
 [appearance]
-width = 500
-anchor_top = 200
+width = 500           # Window width (height auto-sizes)
+anchor_top = 200      # Distance from top of screen
 
 [search]
-min_score = 30        # absolute floor (used only when fuzzy fallback is active)
-score_threshold = 0.6 # fuzzy fallback: keep matches within % of best score
-prefer_prefix = true
+min_score = 30        # Absolute floor for fuzzy fallback
+score_threshold = 0.6 # Keep matches within % of best score (0.0-1.0)
+prefer_prefix = true  # Prioritize exact prefix matches
 
 [apps]
-# Use display names, not .desktop filenames
-favorites = ["Firefox", "Alacritty", "Visual Studio Code"]
-exclude = ["Htop"]
+extra_dirs = []       # Additional directories to scan for .desktop files
+exclude = ["Htop"]    # Apps to hide (use display names)
+favorites = ["Firefox", "Alacritty"]  # Pin to top (use display names)
+
+# Custom app entries
+[[apps.custom]]
+name = "My Script"
+exec = "/path/to/script.sh"
+icon = "utilities-terminal"  # optional, from icon theme
+keywords = ["alias", "shortcut"]  # optional, extra search terms
 ```
 
 ### `style.css`
 
-Full GTK4 CSS theming. Default theme is based on Catppuccin Macchiato with transparency for compositor blur.
+Full GTK4 CSS theming. Copy `defaults/style.css` to `~/.config/yeet/style.css` and customize. Default theme is Catppuccin Macchiato with transparency for compositor blur.
 
 ```css
+/* Use alpha() for compositor blur (Hyprland/Sway) */
 .yeet-window {
   background-color: alpha(#1e1e2e, 0.9);
   border-radius: 12px;
@@ -96,10 +104,27 @@ Full GTK4 CSS theming. Default theme is based on Catppuccin Macchiato with trans
 .yeet-entry {
   font-size: 24px;
   padding: 16px;
+  caret-color: #a6e3a1;
+}
+
+.yeet-row:selected {
+  background-color: #45475a;
 }
 ```
 
-**CSS classes:** `.yeet-window`, `.yeet-container`, `.yeet-entry`, `.yeet-list`, `.yeet-row`, `.yeet-icon`, `.yeet-app-name`, `.yeet-app-desc`, `.yeet-shortcut`
+**CSS classes:**
+| Class | Element |
+|-------|---------|
+| `.yeet-window` | Main window |
+| `.yeet-container` | Inner container |
+| `.yeet-entry` | Search input |
+| `.yeet-list` | Results list |
+| `.yeet-row` | Result row (supports `:selected`, `:hover`) |
+| `.yeet-row-content` | Row inner content |
+| `.yeet-icon` | App icon |
+| `.yeet-app-name` | App name label |
+| `.yeet-app-desc` | App description |
+| `.yeet-shortcut` | Alt+N shortcut badge |
 
 ## Building
 
