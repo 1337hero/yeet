@@ -204,6 +204,41 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
         let filtered_shortcut = filtered_apps.clone();
         let terminal_shortcut = terminal.clone();
 
+        let scroll_controller =
+            gtk4::EventControllerScroll::new(gtk4::EventControllerScrollFlags::VERTICAL);
+        let list_box_scroll = list_box_nav.clone();
+        let accumulated_dy = Rc::new(RefCell::new(0.0_f64));
+        let accumulated_dy_reset = accumulated_dy.clone();
+
+        scroll_controller.connect_scroll(move |_, _, dy| {
+            let mut acc = accumulated_dy.borrow_mut();
+            *acc += dy;
+            let mut moved = false;
+
+            while *acc >= 1.0 {
+                move_selection(&list_box_scroll, 1);
+                *acc -= 1.0;
+                moved = true;
+            }
+            while *acc <= -1.0 {
+                move_selection(&list_box_scroll, -1);
+                *acc += 1.0;
+                moved = true;
+            }
+
+            if moved {
+                gtk4::glib::Propagation::Stop
+            } else {
+                gtk4::glib::Propagation::Proceed
+            }
+        });
+
+        scroll_controller.connect_scroll_end(move |_| {
+            *accumulated_dy_reset.borrow_mut() = 0.0;
+        });
+
+        window.add_controller(scroll_controller);
+
         let key_controller = gtk4::EventControllerKey::new();
         key_controller.connect_key_pressed(move |_, key, _, modifiers| {
             if modifiers.contains(ModifierType::ALT_MASK) {
