@@ -1,7 +1,7 @@
 use crate::config::Config;
-use crate::desktop::{App, launch_app};
-use fuzzy_matcher::FuzzyMatcher;
+use crate::desktop::{launch_app, App};
 use fuzzy_matcher::skim::SkimMatcherV2;
+use fuzzy_matcher::FuzzyMatcher;
 use gtk4::gdk::{Display, ModifierType};
 use gtk4::prelude::*;
 use gtk4::{

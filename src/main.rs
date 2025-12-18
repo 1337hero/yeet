@@ -6,8 +6,8 @@ mod ui;
 
 use config::Config;
 use desktop::discover_apps;
-use gtk4::Application;
 use gtk4::prelude::*;
+use gtk4::Application;
 
 const APP_ID: &str = "dev.yeet.launcher";
 
