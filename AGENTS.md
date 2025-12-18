@@ -21,7 +21,7 @@
 
 ## Build, Test, and Development Commands
 
-This is a single-binary Rust crate. Toolchain is pinned in `rust-toolchain.toml` (Rust `1.85`, `rustfmt`, `clippy`). GTK4 development libraries are required (e.g. `libgtk-4-dev` on Debian/Ubuntu).
+This is a single-binary Rust crate. MSRV is 1.70 (edition 2021). GTK4 development libraries are required (e.g. `libgtk-4-dev` on Debian/Ubuntu).
 
 - `just` / `just --list`: list common tasks.
 - `just run` (`cargo run`): build + run (debug).

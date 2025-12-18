@@ -1,14 +1,14 @@
 [package]
 name = "yeet"
-version = "0.1.1"
-edition = "2024"
+version = "0.1.3"
+edition = "2021"
 authors = ["1337hero"]
 description = "A fast, minimal, configurable app launcher for Wayland"
 license = "GPL-3.0-only"
 repository = "https://github.com/1337hero/yeet"
 keywords = ["launcher", "linux", "gtk", "desktop"]
 categories = ["gui", "command-line-utilities"]
-rust-version = "1.85"
+rust-version = "1.70"
 
 [dependencies]
 gtk4 = "0.10"

@@ -61,6 +61,8 @@
 .yeet-list {
     background-color: transparent;
     padding: 4px;
+    transition: none;
+    animation: none;
 }
 
 /* === List Rows === */
@@ -68,6 +70,8 @@
     background-color: transparent;
     border-radius: 8px;
     margin: 2px 4px;
+    transition: none;
+    animation: none;
 }
 
 .yeet-row:selected {
