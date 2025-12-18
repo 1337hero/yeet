@@ -24,7 +24,7 @@ pkgver() {
 
 build() {
     cd yeet
-    cargo build --release --locked
+    cargo build --release
 }
 
 package() {
