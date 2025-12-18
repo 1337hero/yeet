@@ -29,6 +29,16 @@ Yeet is not trying to be an all-in-one tool. No clipboard manager, no calculator
 yay -S yeet-git
 ```
 
+### Nix
+
+```sh
+# Run directly
+nix run github:1337hero/yeet
+
+# Install to profile
+nix profile install github:1337hero/yeet
+```
+
 ### From Source
 
 ```sh
