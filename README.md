@@ -9,7 +9,7 @@ Hey 👋 I'm [@1337Hero](https://github.com/1337hero) and this is Yeet! A fast, 
 
 ## What Yeet Is
 
-Yeet launches apps. That's it.
+Yeet launches apps. That's it. Custom entries let it double as a command palette too.
 
 - **Fast** — Rust + GTK4, optimized release builds
 - **Minimal** — Single binary, no daemons, no bloat
@@ -98,6 +98,76 @@ name = "My Script"
 exec = "/path/to/script.sh"
 icon = "utilities-terminal"  # optional, from icon theme
 keywords = ["alias", "shortcut"]  # optional, extra search terms
+```
+
+### Custom Entries
+
+Custom entries turn Yeet into a command palette. Define any command as a launchable "app."
+
+Note: commands are executed directly (no shell). Shell features like `~` expansion, `$VARS`, pipes, redirects, and `&&` won’t work unless you explicitly run a shell (e.g. `exec = "sh -c '...'"`).
+
+**Power menu:**
+
+```toml
+[[apps.custom]]
+name = "Logout"
+exec = "hyprctl dispatch exit"
+icon = "system-log-out"
+keywords = ["logout", "sign out", "exit", "session"]
+
+[[apps.custom]]
+name = "Shutdown"
+exec = "systemctl poweroff"
+icon = "system-shutdown"
+keywords = ["power off", "shutdown"]
+
+[[apps.custom]]
+name = "Reboot"
+exec = "systemctl reboot"
+icon = "system-reboot"
+keywords = ["restart", "reboot"]
+
+[[apps.custom]]
+name = "Lock"
+exec = "hyprlock"
+icon = "system-lock-screen"
+keywords = ["lock", "screen"]
+```
+
+**Browser profiles:**
+
+```toml
+[[apps.custom]]
+name = "Chrome - Personal"
+exec = "google-chrome-stable --profile-directory=Default"
+icon = "google-chrome"
+keywords = ["browser", "personal"]
+
+[[apps.custom]]
+name = "Chrome - Work"
+exec = "google-chrome-stable --profile-directory=\"Profile 1\""
+icon = "google-chrome"
+keywords = ["browser", "work"]
+```
+
+**SSH connections:**
+
+```toml
+[[apps.custom]]
+name = "SSH - Production"
+exec = "alacritty -e ssh user@prod-server"
+icon = "utilities-terminal"
+keywords = ["ssh", "prod", "server"]
+```
+
+**Projects / dev environments:**
+
+```toml
+[[apps.custom]]
+name = "Project - Yeet"
+exec = "code /home/you/projects/yeet"
+icon = "visual-studio-code"
+keywords = ["dev", "rust", "launcher"]
 ```
 
 ### `style.css`

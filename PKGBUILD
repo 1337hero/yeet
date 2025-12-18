@@ -1,4 +1,4 @@
-# Maintainer: 1337hero
+# Maintainer: 1337hero <mike@1337hero.com>
 pkgname=yeet-git
 pkgver=0.1.0
 pkgrel=1
