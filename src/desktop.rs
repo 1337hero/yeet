@@ -153,7 +153,7 @@ pub fn launch_app(app: &App, terminal: &str) {
         app.exec.clone()
     };
 
-    if let Err(e) = std::process::Command::new("sh")
+    match std::process::Command::new("sh")
         .arg("-c")
         .arg(&exec)
         .stdin(std::process::Stdio::null())
@@ -161,7 +161,8 @@ pub fn launch_app(app: &App, terminal: &str) {
         .stderr(std::process::Stdio::null())
         .spawn()
     {
-        eprintln!("Failed to launch {}: {}", app.name, e);
+        Ok(_) => crate::history::record_launch(&app.name),
+        Err(e) => eprintln!("Failed to launch {}: {}", app.name, e),
     }
 }
 
