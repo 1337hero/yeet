@@ -83,6 +83,8 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
     let score_threshold = config.search.score_threshold;
     let prefer_prefix = config.search.prefer_prefix;
     let terminal = config.general.terminal.clone();
+    let show_shortcuts = config.appearance.show_shortcuts;
+    let show_descriptions = config.appearance.show_descriptions;
     let use_history = config.search.use_history;
     let history: Rc<HashMap<String, u64>> = Rc::new(if use_history {
         crate::history::load_history()
@@ -107,7 +109,13 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
                 b_ts.cmp(&a_ts)
             });
         }
-        populate_list(&list_box, &apps, &filtered);
+        populate_list(
+            &list_box,
+            &apps,
+            &filtered,
+            show_shortcuts,
+            show_descriptions,
+        );
     }
 
     if let Some(row) = list_box.row_at_index(0) {
@@ -142,7 +150,13 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
                         b_ts.cmp(&a_ts)
                     });
                 }
-                populate_list(&list_box, &apps, &filtered);
+                populate_list(
+                    &list_box,
+                    &apps,
+                    &filtered,
+                    show_shortcuts,
+                    show_descriptions,
+                );
                 if let Some(row) = list_box.row_at_index(0) {
                     list_box.select_row(Some(&row));
                 }
@@ -201,7 +215,13 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
                 filtered.push(i);
             }
 
-            populate_list(&list_box, &apps, &filtered);
+            populate_list(
+                &list_box,
+                &apps,
+                &filtered,
+                show_shortcuts,
+                show_descriptions,
+            );
 
             if let Some(row) = list_box.row_at_index(0) {
                 list_box.select_row(Some(&row));
@@ -339,24 +359,30 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
     window.present();
 }
 
-fn populate_list(list_box: &ListBox, apps: &[App], indices: &[usize]) {
+fn populate_list(
+    list_box: &ListBox,
+    apps: &[App],
+    indices: &[usize],
+    show_shortcuts: bool,
+    show_descriptions: bool,
+) {
     while let Some(row) = list_box.row_at_index(0) {
         list_box.remove(&row);
     }
 
     for (display_idx, &app_idx) in indices.iter().enumerate() {
         let app = &apps[app_idx];
-        let shortcut = if display_idx < 9 {
+        let shortcut = if show_shortcuts && display_idx < 9 {
             Some(display_idx + 1)
         } else {
             None
         };
-        let row = create_app_row(app, shortcut);
+        let row = create_app_row(app, shortcut, show_descriptions);
         list_box.append(&row);
     }
 }
 
-fn create_app_row(app: &App, shortcut: Option<usize>) -> ListBoxRow {
+fn create_app_row(app: &App, shortcut: Option<usize>, show_descriptions: bool) -> ListBoxRow {
     let hbox = GtkBox::new(Orientation::Horizontal, 10);
     hbox.set_margin_top(8);
     hbox.set_margin_bottom(8);
@@ -380,7 +406,7 @@ fn create_app_row(app: &App, shortcut: Option<usize>) -> ListBoxRow {
     name_label.add_css_class("yeet-app-name");
     text_box.append(&name_label);
 
-    if let Some(desc) = &app.description {
+    if let Some(desc) = app.description.as_ref().filter(|_| show_descriptions) {
         let desc_label = Label::new(Some(desc));
         desc_label.set_halign(gtk4::Align::Start);
         desc_label.set_ellipsize(gtk4::pango::EllipsizeMode::End);

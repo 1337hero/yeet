@@ -24,6 +24,12 @@ anchor_top = 200
 # Height per result row in pixels (used for fixed list height)
 row_height = 56
 
+# Show Alt+N shortcut badges on result rows
+show_shortcuts = true
+
+# Show app description below the name
+show_descriptions = true
+
 [search]
 # Search prefers substring matches in app name/keywords for 2+ characters.
 # If there are no substring matches, it falls back to fuzzy matching.
