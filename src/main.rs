@@ -2,6 +2,7 @@
 
 mod config;
 mod desktop;
+pub mod history;
 mod ui;
 
 use config::Config;
