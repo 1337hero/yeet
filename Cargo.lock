@@ -1106,13 +1106,14 @@ checksum = "3ae8337f8a065cfc972643663ea4279e04e7256de865aa66fe25cec5fb912d3f"
 
 [[package]]
 name = "yeet"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "dirs",
  "freedesktop-desktop-entry",
  "fuzzy-matcher",
  "gtk4",
  "gtk4-layer-shell",
+ "libc",
  "serde",
  "toml 0.8.23",
 ]
