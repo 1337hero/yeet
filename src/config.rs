@@ -35,6 +35,10 @@ pub struct AppearanceConfig {
     pub anchor_top: i32,
     #[serde(default = "default_row_height")]
     pub row_height: i32,
+    #[serde(default = "default_true")]
+    pub show_shortcuts: bool,
+    #[serde(default = "default_true")]
+    pub show_descriptions: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -116,6 +120,8 @@ impl Default for AppearanceConfig {
             width: default_width(),
             anchor_top: default_anchor_top(),
             row_height: default_row_height(),
+            show_shortcuts: default_true(),
+            show_descriptions: default_true(),
         }
     }
 }
