@@ -9,7 +9,7 @@ Hey 👋 I'm [@1337Hero](https://github.com/1337hero) and this is Yeet! A fast, 
 
 ## What Yeet Is
 
-Yeet launches apps. That's it. Since `exec` commands are passed straight to the shell, it doubles as a command palette too.
+Yeet launches apps. That's it. Desktop entry commands run directly (without shell evaluation), and `apps.custom` commands run through the shell so it can also act as a command palette.
 
 - **Fast** — Rust + GTK4, optimized release builds
 - **Minimal** — Single binary, no daemons, no bloat
@@ -102,7 +102,7 @@ keywords = ["alias", "shortcut"]  # optional, extra search terms
 
 ### Custom Entries
 
-Since `exec` is passed directly to the shell, Yeet doubles as a command palette. Anything you can run in a terminal becomes a launchable "app."
+`apps.custom.exec` is passed to the shell, so Yeet doubles as a command palette. Anything you can run in a terminal becomes a launchable "app."
 
 **Power menu:**
 

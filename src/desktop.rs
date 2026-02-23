@@ -1,6 +1,13 @@
 use crate::config::{Config, CustomApp};
 use freedesktop_desktop_entry::{DesktopEntry, Iter as DesktopIter};
 use std::path::PathBuf;
+use std::process::{Command, Stdio};
+
+#[derive(Debug, Clone)]
+enum LaunchCommand {
+    Direct(Vec<String>),
+    Shell(String),
+}
 
 #[derive(Debug, Clone)]
 pub struct App {
@@ -10,6 +17,7 @@ pub struct App {
     pub description: Option<String>,
     pub keywords: Vec<String>,
     pub terminal: bool,
+    launch: LaunchCommand,
 }
 
 impl App {
@@ -21,6 +29,7 @@ impl App {
             description: None,
             keywords: custom.keywords.clone(),
             terminal: false,
+            launch: LaunchCommand::Shell(custom.exec.clone()),
         }
     }
 
@@ -54,20 +63,21 @@ pub fn discover_apps(config: &Config) -> Vec<App> {
                 continue;
             }
 
-            let Some(exec) = entry.exec() else { continue };
             let Some(name) = entry.name(&["en"]) else {
                 continue;
+            };
+            let exec_args = match entry.parse_exec() {
+                Ok(args) if !args.is_empty() => args,
+                _ => continue,
             };
 
             if exclude_set.contains(name.as_ref()) {
                 continue;
             }
 
-            let exec_clean = clean_exec(exec);
-
             let app = App {
                 name: name.to_string(),
-                exec: exec_clean,
+                exec: exec_args.join(" "),
                 icon: entry.icon().map(|s| s.to_string()),
                 description: entry.comment(&["en"]).map(|s| s.to_string()),
                 keywords: entry
@@ -75,6 +85,7 @@ pub fn discover_apps(config: &Config) -> Vec<App> {
                     .map(|kws| kws.into_iter().map(|s| s.to_string()).collect())
                     .unwrap_or_default(),
                 terminal: entry.terminal(),
+                launch: LaunchCommand::Direct(exec_args),
             };
 
             apps.push(app);
@@ -119,50 +130,57 @@ fn xdg_application_dirs() -> Vec<PathBuf> {
     dirs
 }
 
-fn clean_exec(exec: &str) -> String {
-    const FIELD_CODES: &[char] = &[
-        'f', 'F', 'u', 'U', 'd', 'D', 'n', 'N', 'i', 'c', 'k', 'v', 'm',
-    ];
-
-    let mut result = String::with_capacity(exec.len());
-    let mut chars = exec.chars();
-
-    while let Some(c) = chars.next() {
-        if c == '%' {
-            if let Some(next) = chars.next() {
-                if next == '%' {
-                    result.push('%');
-                } else if !FIELD_CODES.contains(&next) {
-                    result.push('%');
-                    result.push(next);
-                }
-            }
-        } else {
-            result.push(c);
-        }
-    }
-
-    result.trim().to_string()
-}
-
 pub fn launch_app(app: &App, terminal: &str) {
-    let exec = if app.terminal {
-        format!("{} -e {}", terminal, app.exec)
-    } else {
-        app.exec.clone()
+    let command = match &app.launch {
+        LaunchCommand::Direct(args) => spawn_direct(args, app.terminal.then_some(terminal)),
+        LaunchCommand::Shell(exec) => spawn_shell(exec, app.terminal.then_some(terminal)),
     };
 
-    match std::process::Command::new("sh")
-        .arg("-c")
-        .arg(&exec)
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-    {
+    match command {
         Ok(_) => crate::history::record_launch(&app.name),
         Err(e) => eprintln!("Failed to launch {}: {}", app.name, e),
     }
+}
+
+fn spawn_direct(args: &[String], terminal: Option<&str>) -> std::io::Result<std::process::Child> {
+    if args.is_empty() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "empty command",
+        ));
+    }
+
+    let mut cmd = if let Some(terminal) = terminal {
+        let mut command = Command::new(terminal);
+        command.arg("-e").arg(&args[0]).args(&args[1..]);
+        command
+    } else {
+        let mut command = Command::new(&args[0]);
+        command.args(&args[1..]);
+        command
+    };
+
+    cmd.stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+}
+
+fn spawn_shell(exec: &str, terminal: Option<&str>) -> std::io::Result<std::process::Child> {
+    let mut cmd = if let Some(terminal) = terminal {
+        let mut command = Command::new(terminal);
+        command.arg("-e").arg("sh").arg("-c").arg(exec);
+        command
+    } else {
+        let mut command = Command::new("sh");
+        command.arg("-c").arg(exec);
+        command
+    };
+
+    cmd.stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
 }
 
 #[cfg(test)]
@@ -170,33 +188,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn clean_exec_preserves_plain_commands() {
-        assert_eq!(clean_exec("firefox"), "firefox");
-        assert_eq!(clean_exec("/usr/bin/app --flag"), "/usr/bin/app --flag");
+    fn custom_app_uses_shell_launch_mode() {
+        let custom = CustomApp {
+            name: "My Script".to_string(),
+            exec: "echo hello".to_string(),
+            icon: None,
+            keywords: Vec::new(),
+        };
+
+        let app = App::from_custom(&custom);
+        match app.launch {
+            LaunchCommand::Shell(cmd) => assert_eq!(cmd, "echo hello"),
+            LaunchCommand::Direct(_) => panic!("custom entries must use shell launch mode"),
+        }
     }
 
     #[test]
-    fn clean_exec_removes_field_codes() {
-        assert_eq!(clean_exec("firefox %u"), "firefox");
-        assert_eq!(clean_exec("app %U"), "app");
-        assert_eq!(clean_exec("app %f %F"), "app");
-        assert_eq!(clean_exec("code %F --new-window"), "code  --new-window");
-    }
-
-    #[test]
-    fn clean_exec_preserves_escaped_percent() {
-        assert_eq!(clean_exec("echo 100%%"), "echo 100%");
-        assert_eq!(clean_exec("app --format=%%d"), "app --format=%d");
-    }
-
-    #[test]
-    fn clean_exec_preserves_non_field_code_percent() {
-        assert_eq!(clean_exec("app --ratio=50%x"), "app --ratio=50%x");
-        assert_eq!(clean_exec("echo %z"), "echo %z");
-    }
-
-    #[test]
-    fn clean_exec_handles_trailing_percent() {
-        assert_eq!(clean_exec("app %"), "app");
+    fn spawn_direct_rejects_empty_command() {
+        let err = spawn_direct(&[], None).expect_err("empty command must fail");
+        assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
     }
 }
