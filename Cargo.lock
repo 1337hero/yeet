@@ -1106,7 +1106,7 @@ checksum = "3ae8337f8a065cfc972643663ea4279e04e7256de865aa66fe25cec5fb912d3f"
 
 [[package]]
 name = "yeet"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "dirs",
  "freedesktop-desktop-entry",

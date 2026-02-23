@@ -21,6 +21,9 @@ width = 500
 # Window anchors from screen edge (pixels)
 anchor_top = 200
 
+# Height per result row in pixels (used for fixed list height)
+row_height = 56
+
 [search]
 # Search prefers substring matches in app name/keywords for 2+ characters.
 # If there are no substring matches, it falls back to fuzzy matching.
@@ -34,6 +37,9 @@ score_threshold = 0.6
 
 # Prioritize exact prefix matches
 prefer_prefix = true
+
+# Use launch history to boost recently used apps in results
+use_history = true
 
 [apps]
 # Directories to scan for .desktop files (in addition to XDG defaults)
