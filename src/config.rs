@@ -33,6 +33,8 @@ pub struct AppearanceConfig {
     pub width: i32,
     #[serde(default = "default_anchor_top")]
     pub anchor_top: i32,
+    #[serde(default = "default_row_height")]
+    pub row_height: i32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -43,6 +45,8 @@ pub struct SearchConfig {
     pub score_threshold: f64,
     #[serde(default = "default_true")]
     pub prefer_prefix: bool,
+    #[serde(default = "default_true")]
+    pub use_history: bool,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -88,6 +92,9 @@ fn default_min_score() -> i64 {
 fn default_score_threshold() -> f64 {
     0.6
 }
+fn default_row_height() -> i32 {
+    56
+}
 fn default_true() -> bool {
     true
 }
@@ -108,6 +115,7 @@ impl Default for AppearanceConfig {
         Self {
             width: default_width(),
             anchor_top: default_anchor_top(),
+            row_height: default_row_height(),
         }
     }
 }
@@ -118,6 +126,7 @@ impl Default for SearchConfig {
             min_score: default_min_score(),
             score_threshold: default_score_threshold(),
             prefer_prefix: default_true(),
+            use_history: default_true(),
         }
     }
 }
@@ -264,6 +273,38 @@ mod tests {
         let config = Config::from_toml(user_toml).unwrap();
         assert_eq!(config.apps.favorites, vec!["Firefox", "Alacritty"]);
         assert_eq!(config.apps.exclude, vec!["htop.desktop", "nvtop.desktop"]);
+    }
+
+    #[test]
+    fn parses_row_height_from_toml() {
+        let toml = r#"
+            [appearance]
+            row_height = 42
+        "#;
+        let config = Config::from_toml(toml).unwrap();
+        assert_eq!(config.appearance.row_height, 42);
+    }
+
+    #[test]
+    fn row_height_defaults_to_56() {
+        let config = Config::from_toml("").unwrap();
+        assert_eq!(config.appearance.row_height, 56);
+    }
+
+    #[test]
+    fn parses_use_history_from_toml() {
+        let toml = r#"
+            [search]
+            use_history = false
+        "#;
+        let config = Config::from_toml(toml).unwrap();
+        assert!(!config.search.use_history);
+    }
+
+    #[test]
+    fn use_history_defaults_to_true() {
+        let config = Config::from_toml("").unwrap();
+        assert!(config.search.use_history);
     }
 
     #[test]

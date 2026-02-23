@@ -9,7 +9,7 @@ Hey 👋 I'm [@1337Hero](https://github.com/1337hero) and this is Yeet! A fast, 
 
 ## What Yeet Is
 
-Yeet launches apps. That's it. Custom entries let it double as a command palette too.
+Yeet launches apps. That's it. Since `exec` commands are passed straight to the shell, it doubles as a command palette too.
 
 - **Fast** — Rust + GTK4, optimized release builds
 - **Minimal** — Single binary, no daemons, no bloat
@@ -102,9 +102,7 @@ keywords = ["alias", "shortcut"]  # optional, extra search terms
 
 ### Custom Entries
 
-Custom entries turn Yeet into a command palette. Define any command as a launchable "app."
-
-Note: commands are executed directly (no shell). Shell features like `~` expansion, `$VARS`, pipes, redirects, and `&&` won’t work unless you explicitly run a shell (e.g. `exec = "sh -c '...'"`).
+Since `exec` is passed directly to the shell, Yeet doubles as a command palette. Anything you can run in a terminal becomes a launchable "app."
 
 **Power menu:**
 
@@ -165,7 +163,7 @@ keywords = ["ssh", "prod", "server"]
 ```toml
 [[apps.custom]]
 name = "Project - Yeet"
-exec = "code /home/you/projects/yeet"
+exec = "code ~/projects/yeet"
 icon = "visual-studio-code"
 keywords = ["dev", "rust", "launcher"]
 ```

@@ -10,6 +10,7 @@ use gtk4::{
 };
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 const DEFAULT_STYLE: &str = include_str!("../defaults/style.css");
@@ -46,6 +47,9 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
     list_box.set_selection_mode(gtk4::SelectionMode::Single);
     list_box.add_css_class("yeet-list");
 
+    let list_height = config.appearance.row_height * config.general.max_results as i32;
+    list_box.set_size_request(-1, list_height);
+
     vbox.append(&entry);
     vbox.append(&list_box);
     window.set_child(Some(&vbox));
@@ -79,12 +83,29 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
     let score_threshold = config.search.score_threshold;
     let prefer_prefix = config.search.prefer_prefix;
     let terminal = config.general.terminal.clone();
+    let use_history = config.search.use_history;
+    let history: Rc<HashMap<String, u64>> = Rc::new(if use_history {
+        crate::history::load_history()
+    } else {
+        HashMap::new()
+    });
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
 
     {
         let mut filtered = filtered_apps.borrow_mut();
         filtered.clear();
         for (i, _) in apps.iter().enumerate().take(initial_results) {
             filtered.push(i);
+        }
+        if !history.is_empty() {
+            filtered.sort_by(|&a, &b| {
+                let a_ts = history.get(&apps[a].name).copied().unwrap_or(0);
+                let b_ts = history.get(&apps[b].name).copied().unwrap_or(0);
+                b_ts.cmp(&a_ts)
+            });
         }
         populate_list(&list_box, &apps, &filtered);
     }
@@ -100,6 +121,7 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
         let app_name_keyword_texts_lower = app_name_keyword_texts_lower.clone();
         let filtered_apps = filtered_apps.clone();
         let matcher = matcher.clone();
+        let history = history.clone();
         let list_box = list_box.clone();
 
         entry.connect_changed(move |entry| {
@@ -112,6 +134,13 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
             if query_len == 0 {
                 for (i, _) in apps.iter().enumerate().take(initial_results) {
                     filtered.push(i);
+                }
+                if !history.is_empty() {
+                    filtered.sort_by(|&a, &b| {
+                        let a_ts = history.get(&apps[a].name).copied().unwrap_or(0);
+                        let b_ts = history.get(&apps[b].name).copied().unwrap_or(0);
+                        b_ts.cmp(&a_ts)
+                    });
                 }
                 populate_list(&list_box, &apps, &filtered);
                 if let Some(row) = list_box.row_at_index(0) {
@@ -137,7 +166,8 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
                             .unwrap_or(0);
                         let is_prefix =
                             prefer_prefix && app_names_lower[i].starts_with(&query_lower);
-                        (i, score, is_prefix)
+                        let boost = recency_boost(&history, &apps[i].name, now);
+                        (i, score + boost, is_prefix)
                     })
                     .collect()
             } else {
@@ -148,7 +178,8 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
                         matcher.fuzzy_match(text, query).map(|score| {
                             let is_prefix =
                                 prefer_prefix && app_names_lower[i].starts_with(&query_lower);
-                            (i, score, is_prefix)
+                            let boost = recency_boost(&history, &apps[i].name, now);
+                            (i, score + boost, is_prefix)
                         })
                     })
                     .collect()
@@ -380,20 +411,32 @@ fn move_selection(list_box: &ListBox, delta: i32) {
     }
 }
 
+fn recency_boost(history: &HashMap<String, u64>, app_name: &str, now: u64) -> i64 {
+    history
+        .get(app_name)
+        .map(|&last| {
+            let age_hours = (now.saturating_sub(last)) / 3600;
+            match age_hours {
+                0..=24 => 100,
+                25..=168 => 50,
+                _ => 20,
+            }
+        })
+        .unwrap_or(0)
+}
+
 fn load_css() {
     let provider = CssProvider::new();
 
-    let css = if let Some(user_path) = Config::user_style_path() {
+    if let Some(user_path) = Config::user_style_path() {
         if user_path.exists() {
-            std::fs::read_to_string(&user_path).unwrap_or_else(|_| DEFAULT_STYLE.to_string())
+            provider.load_from_path(&user_path);
         } else {
-            DEFAULT_STYLE.to_string()
+            provider.load_from_data(DEFAULT_STYLE);
         }
     } else {
-        DEFAULT_STYLE.to_string()
-    };
-
-    provider.load_from_data(&css);
+        provider.load_from_data(DEFAULT_STYLE);
+    }
 
     gtk4::style_context_add_provider_for_display(
         &Display::default().expect("Could not get default display"),
