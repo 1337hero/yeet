@@ -26,7 +26,8 @@ Yeet is not trying to be an all-in-one tool. No clipboard manager, no calculator
 ### Arch Linux (AUR)
 
 ```sh
-yay -S yeet-git
+yay -S yeet-launcher   # latest tagged release
+yay -S yeet-git        # build from main
 ```
 
 ### Nix
