@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.2.0] - 2026-07-08
 
 ### Added
 - dmenu mode: `yeet --dmenu` reads items from stdin, prints the selection to stdout, and exits non-zero when nothing is selected (#9)
