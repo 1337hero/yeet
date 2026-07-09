@@ -1,6 +1,7 @@
 use crate::config::{Config, CustomApp};
 use freedesktop_desktop_entry::{get_languages_from_env, DesktopEntry, Iter as DesktopIter};
 use std::collections::HashSet;
+use std::ffi::OsString;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
@@ -50,7 +51,6 @@ impl App {
 }
 
 pub fn discover_apps(config: &Config) -> Vec<App> {
-    let mut apps = Vec::new();
     let exclude_set: HashSet<&str> = config.apps.exclude.iter().map(|s| s.as_str()).collect();
 
     let all_dirs: Vec<PathBuf> = xdg_application_dirs()
@@ -59,39 +59,7 @@ pub fn discover_apps(config: &Config) -> Vec<App> {
         .collect();
 
     let locales = get_languages_from_env();
-
-    for path in DesktopIter::new(all_dirs.into_iter()) {
-        if let Ok(entry) = DesktopEntry::from_path(&path, Some(&locales)) {
-            if entry.no_display() || entry.hidden() {
-                continue;
-            }
-
-            let Some(name) = entry.name(&locales) else {
-                continue;
-            };
-            let exec_args = match entry.parse_exec() {
-                Ok(args) if !args.is_empty() => args,
-                _ => continue,
-            };
-
-            if exclude_set.contains(name.as_ref()) {
-                continue;
-            }
-
-            apps.push(App {
-                name: name.to_string(),
-                icon: entry.icon().map(|s| s.to_string()),
-                description: entry.comment(&locales).map(|s| s.to_string()),
-                keywords: entry
-                    .keywords(&locales)
-                    .map(|kws| kws.into_iter().map(|s| s.to_string()).collect())
-                    .unwrap_or_default(),
-                terminal: entry.terminal(),
-                favorite: false,
-                launch: LaunchCommand::Direct(exec_args),
-            });
-        }
-    }
+    let mut apps = apps_from_dirs(all_dirs, &exclude_set, &locales);
 
     for custom in &config.apps.custom {
         apps.push(App::from_custom(custom));
@@ -103,6 +71,55 @@ pub fn discover_apps(config: &Config) -> Vec<App> {
     }
 
     apps.sort_by_cached_key(|a| (!a.favorite, a.name.to_lowercase()));
+
+    apps
+}
+
+fn apps_from_dirs(dirs: Vec<PathBuf>, exclude: &HashSet<&str>, locales: &[String]) -> Vec<App> {
+    let mut apps = Vec::new();
+    // XDG precedence: a desktop file id seen in an earlier dir shadows later
+    // ones entirely, even if the earlier entry is hidden.
+    let mut seen: HashSet<OsString> = HashSet::new();
+
+    for path in DesktopIter::new(dirs.into_iter()) {
+        let Some(file_name) = path.file_name() else {
+            continue;
+        };
+        if !seen.insert(file_name.to_os_string()) {
+            continue;
+        }
+
+        if let Ok(entry) = DesktopEntry::from_path(&path, Some(locales)) {
+            if entry.no_display() || entry.hidden() {
+                continue;
+            }
+
+            let Some(name) = entry.name(locales) else {
+                continue;
+            };
+            let exec_args = match entry.parse_exec() {
+                Ok(args) if !args.is_empty() => args,
+                _ => continue,
+            };
+
+            if exclude.contains(name.as_ref()) {
+                continue;
+            }
+
+            apps.push(App {
+                name: name.to_string(),
+                icon: entry.icon().map(|s| s.to_string()),
+                description: entry.comment(locales).map(|s| s.to_string()),
+                keywords: entry
+                    .keywords(locales)
+                    .map(|kws| kws.into_iter().map(|s| s.to_string()).collect())
+                    .unwrap_or_default(),
+                terminal: entry.terminal(),
+                favorite: false,
+                launch: LaunchCommand::Direct(exec_args),
+            });
+        }
+    }
 
     apps
 }
@@ -181,6 +198,7 @@ fn spawn_shell(exec: &str, terminal: Option<&str>) -> std::io::Result<std::proce
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     #[test]
     fn custom_app_uses_shell_launch_mode() {
@@ -202,5 +220,59 @@ mod tests {
     fn spawn_direct_rejects_empty_command() {
         let err = spawn_direct(&[], None).expect_err("empty command must fail");
         assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
+    }
+
+    fn write_desktop_file(dir: &std::path::Path, file: &str, name: &str) {
+        fs::write(
+            dir.join(file),
+            format!("[Desktop Entry]\nType=Application\nName={name}\nExec=true\n"),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn duplicate_desktop_ids_prefer_earlier_dirs() {
+        let base = std::env::temp_dir().join("yeet_test_dedup");
+        let _ = fs::remove_dir_all(&base);
+        let local = base.join("local");
+        let system = base.join("system");
+        fs::create_dir_all(&local).unwrap();
+        fs::create_dir_all(&system).unwrap();
+
+        write_desktop_file(&local, "firefox.desktop", "Firefox Local");
+        write_desktop_file(&system, "firefox.desktop", "Firefox System");
+        write_desktop_file(&system, "kitty.desktop", "Kitty");
+
+        let apps = apps_from_dirs(vec![local, system], &HashSet::new(), &[]);
+
+        let names: Vec<&str> = apps.iter().map(|a| a.name.as_str()).collect();
+        assert!(names.contains(&"Firefox Local"));
+        assert!(!names.contains(&"Firefox System"));
+        assert!(names.contains(&"Kitty"));
+        assert_eq!(apps.len(), 2);
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn hidden_local_entry_shadows_system_entry() {
+        let base = std::env::temp_dir().join("yeet_test_shadow");
+        let _ = fs::remove_dir_all(&base);
+        let local = base.join("local");
+        let system = base.join("system");
+        fs::create_dir_all(&local).unwrap();
+        fs::create_dir_all(&system).unwrap();
+
+        fs::write(
+            local.join("htop.desktop"),
+            "[Desktop Entry]\nType=Application\nName=Htop\nExec=htop\nNoDisplay=true\n",
+        )
+        .unwrap();
+        write_desktop_file(&system, "htop.desktop", "Htop");
+
+        let apps = apps_from_dirs(vec![local, system], &HashSet::new(), &[]);
+        assert!(apps.is_empty());
+
+        let _ = fs::remove_dir_all(&base);
     }
 }

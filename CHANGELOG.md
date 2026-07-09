@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Duplicate apps from multiple `.desktop` directories are deduplicated; local entries shadow system ones per XDG precedence (#8)
+
 ### Added
 - Desktop entry names, descriptions, and keywords now honor the system locale instead of always using English
 
