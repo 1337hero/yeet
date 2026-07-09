@@ -74,7 +74,7 @@ Config lives in `~/.config/yeet/`. Yeet ships with sensible defaults — only ov
 ```toml
 [general]
 max_results = 8       # Max results when searching
-initial_results = 8   # Results shown before typing (0 = just search bar)
+initial_results = 8   # Results shown before typing (0 = show all, scrollable)
 terminal = "alacritty"
 
 [appearance]

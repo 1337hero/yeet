@@ -5,7 +5,7 @@
 # Max results to show when searching
 max_results = 8
 
-# Results to show before typing (0 = just search bar, or show favorites)
+# Results to show before typing (0 = show all apps in a scrollable list)
 initial_results = 8
 
 # Terminal emulator for running terminal apps
