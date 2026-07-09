@@ -17,8 +17,6 @@ pub struct Config {
 
 #[derive(Debug, Deserialize)]
 pub struct GeneralConfig {
-    #[serde(default)]
-    pub monitor: u32,
     #[serde(default = "default_max_results")]
     pub max_results: usize,
     #[serde(default = "default_initial_results")]
@@ -106,7 +104,6 @@ fn default_true() -> bool {
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
-            monitor: 0,
             max_results: default_max_results(),
             initial_results: default_initial_results(),
             terminal: default_terminal(),
