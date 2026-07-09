@@ -65,6 +65,20 @@ yeet
 
 Bind it to a key in your compositor (e.g., `Super+Space` in Hyprland/Sway).
 
+### dmenu mode
+
+Pipe lines into `yeet --dmenu` and the selection is printed to stdout, so yeet can drive script menus the same way `wofi --dmenu` or `rofi -dmenu` do:
+
+```sh
+# Simple picker
+selected=$(echo -e "Firefox\nChrome\nBrave" | yeet --dmenu)
+
+# Keybind viewer
+grep "^bind" ~/.config/hypr/hyprland.conf | yeet --dmenu
+```
+
+Exits non-zero when nothing is selected (Escape).
+
 ## Configuration
 
 Config lives in `~/.config/yeet/`. Yeet ships with sensible defaults — only override what you need.

@@ -35,8 +35,7 @@ impl App {
         }
     }
 
-    /// A bare item with a name only; used in tests.
-    #[cfg(test)]
+    /// A bare item with a name only; used for dmenu mode and tests.
     pub fn plain(name: String) -> Self {
         Self {
             launch: LaunchCommand::Shell(name.clone()),
