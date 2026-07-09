@@ -9,6 +9,7 @@ repository = "https://github.com/1337hero/yeet"
 keywords = ["launcher", "linux", "gtk", "desktop"]
 categories = ["gui", "command-line-utilities"]
 rust-version = "1.70"
+include = ["src/", "defaults/", "LICENSE", "README.md", "CHANGELOG.md"]
 
 [dependencies]
 gtk4 = "0.10"
