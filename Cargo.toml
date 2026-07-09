@@ -1,5 +1,5 @@
 [package]
-name = "yeet"
+name = "yeet-launcher"
 version = "0.2.0"
 edition = "2021"
 authors = ["1337hero"]
@@ -10,6 +10,11 @@ keywords = ["launcher", "linux", "gtk", "desktop"]
 categories = ["gui", "command-line-utilities"]
 rust-version = "1.70"
 include = ["src/", "defaults/", "LICENSE", "README.md", "CHANGELOG.md"]
+
+# the crates.io name "yeet" is squatted; the binary is still yeet
+[[bin]]
+name = "yeet"
+path = "src/main.rs"
 
 [dependencies]
 gtk4 = "0.10"
