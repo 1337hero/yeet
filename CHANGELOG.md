@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- dmenu mode: `yeet --dmenu` reads items from stdin, prints the selection to stdout, and exits non-zero when nothing is selected (#9)
+- `--help` / `--version` flags
 - Scrollable result list; `initial_results = 0` now shows all apps in a scrollable list (#7)
 - Desktop entry names, descriptions, and keywords now honor the system locale instead of always using English
 
