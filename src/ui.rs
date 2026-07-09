@@ -10,6 +10,7 @@ use gtk4::{
 };
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::RefCell;
+use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -98,17 +99,7 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
 
     {
         let mut filtered = filtered_apps.borrow_mut();
-        filtered.clear();
-        for (i, _) in apps.iter().enumerate().take(initial_results) {
-            filtered.push(i);
-        }
-        if !history.is_empty() {
-            filtered.sort_by(|&a, &b| {
-                let a_ts = history.get(&apps[a].name).copied().unwrap_or(0);
-                let b_ts = history.get(&apps[b].name).copied().unwrap_or(0);
-                b_ts.cmp(&a_ts)
-            });
-        }
+        *filtered = initial_indices(&apps, &history, initial_results);
         populate_list(
             &list_box,
             &apps,
@@ -117,10 +108,7 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
             show_descriptions,
         );
     }
-
-    if let Some(row) = list_box.row_at_index(0) {
-        list_box.select_row(Some(&row));
-    }
+    select_first(&list_box);
 
     {
         let apps = apps.clone();
@@ -137,19 +125,9 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
             let query = query.trim();
             let query_len = query.chars().count();
             let mut filtered = filtered_apps.borrow_mut();
-            filtered.clear();
 
             if query_len == 0 {
-                for (i, _) in apps.iter().enumerate().take(initial_results) {
-                    filtered.push(i);
-                }
-                if !history.is_empty() {
-                    filtered.sort_by(|&a, &b| {
-                        let a_ts = history.get(&apps[a].name).copied().unwrap_or(0);
-                        let b_ts = history.get(&apps[b].name).copied().unwrap_or(0);
-                        b_ts.cmp(&a_ts)
-                    });
-                }
+                *filtered = initial_indices(&apps, &history, initial_results);
                 populate_list(
                     &list_box,
                     &apps,
@@ -157,11 +135,11 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
                     show_shortcuts,
                     show_descriptions,
                 );
-                if let Some(row) = list_box.row_at_index(0) {
-                    list_box.select_row(Some(&row));
-                }
+                select_first(&list_box);
                 return;
             }
+
+            filtered.clear();
 
             let query_lower = query.to_lowercase();
             let has_substring_matches = query_len >= 2
@@ -222,10 +200,7 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
                 show_shortcuts,
                 show_descriptions,
             );
-
-            if let Some(row) = list_box.row_at_index(0) {
-                list_box.select_row(Some(&row));
-            }
+            select_first(&list_box);
         });
     }
 
@@ -359,6 +334,22 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
     window.present();
 }
 
+/// Indices shown before any query: favorites first, then most recently
+/// launched, then the pre-sorted (alphabetical) order.
+fn initial_indices(apps: &[App], history: &HashMap<String, u64>, count: usize) -> Vec<usize> {
+    let mut indices: Vec<usize> = (0..apps.len()).collect();
+    if !history.is_empty() {
+        indices.sort_by_key(|&i| {
+            (
+                !apps[i].favorite,
+                Reverse(history.get(&apps[i].name).copied().unwrap_or(0)),
+            )
+        });
+    }
+    indices.truncate(count);
+    indices
+}
+
 fn populate_list(
     list_box: &ListBox,
     apps: &[App],
@@ -429,6 +420,12 @@ fn create_app_row(app: &App, shortcut: Option<usize>, show_descriptions: bool) -
     row
 }
 
+fn select_first(list_box: &ListBox) {
+    if let Some(row) = list_box.row_at_index(0) {
+        list_box.select_row(Some(&row));
+    }
+}
+
 fn move_selection(list_box: &ListBox, delta: i32) {
     let current = list_box.selected_row().map(|r| r.index()).unwrap_or(-1);
     let new_idx = (current + delta).max(0);
@@ -454,14 +451,10 @@ fn recency_boost(history: &HashMap<String, u64>, app_name: &str, now: u64) -> i6
 fn load_css() {
     let provider = CssProvider::new();
 
-    if let Some(user_path) = Config::user_style_path() {
-        if user_path.exists() {
-            provider.load_from_path(&user_path);
-        } else {
-            provider.load_from_data(DEFAULT_STYLE);
-        }
-    } else {
-        provider.load_from_data(DEFAULT_STYLE);
+    let user_style = Config::user_style_path().filter(|p| p.exists());
+    match user_style {
+        Some(path) => provider.load_from_path(&path),
+        None => provider.load_from_data(DEFAULT_STYLE),
     }
 
     gtk4::style_context_add_provider_for_display(
@@ -469,4 +462,42 @@ fn load_css() {
         &provider,
         gtk4::STYLE_PROVIDER_PRIORITY_USER,
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn plain_apps(names: &[&str]) -> Vec<App> {
+        names.iter().map(|n| App::plain(n.to_string())).collect()
+    }
+
+    #[test]
+    fn initial_indices_surfaces_recent_apps_beyond_first_n() {
+        // Alphabetical list; "zoom" was launched recently but sorts last.
+        let apps = plain_apps(&["alpha", "beta", "gamma", "zoom"]);
+        let mut history = HashMap::new();
+        history.insert("zoom".to_string(), 1000);
+
+        let indices = initial_indices(&apps, &history, 2);
+        assert_eq!(indices, vec![3, 0]);
+    }
+
+    #[test]
+    fn initial_indices_keeps_favorites_on_top() {
+        let mut apps = plain_apps(&["fav", "other", "recent"]);
+        apps[0].favorite = true;
+        let mut history = HashMap::new();
+        history.insert("recent".to_string(), 1000);
+
+        let indices = initial_indices(&apps, &history, 2);
+        assert_eq!(indices, vec![0, 2]);
+    }
+
+    #[test]
+    fn initial_indices_preserves_order_without_history() {
+        let apps = plain_apps(&["a", "b", "c"]);
+        let indices = initial_indices(&apps, &HashMap::new(), 2);
+        assert_eq!(indices, vec![0, 1]);
+    }
 }

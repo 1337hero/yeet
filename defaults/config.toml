@@ -2,9 +2,6 @@
 # User overrides go in ~/.config/yeet/config.toml
 
 [general]
-# Show window on specific monitor (0 = primary)
-monitor = 0
-
 # Max results to show when searching
 max_results = 8
 
