@@ -4,13 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Fixed
-- Duplicate apps from multiple `.desktop` directories are deduplicated; local entries shadow system ones per XDG precedence (#8)
-
 ### Added
+- Scrollable result list; `initial_results = 0` now shows all apps in a scrollable list (#7)
 - Desktop entry names, descriptions, and keywords now honor the system locale instead of always using English
 
 ### Fixed
+- Duplicate apps from multiple `.desktop` directories are deduplicated; local entries shadow system ones per XDG precedence (#8)
 - Recently launched apps now surface in the initial list even when they sort outside the first `initial_results` alphabetically
 - Launching yeet while a window is already open no longer stacks a second window inside the first instance
 

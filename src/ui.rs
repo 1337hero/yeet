@@ -6,7 +6,7 @@ use gtk4::gdk::{Display, ModifierType};
 use gtk4::prelude::*;
 use gtk4::{
     Application, ApplicationWindow, Box as GtkBox, CssProvider, Entry, Label, ListBox, ListBoxRow,
-    Orientation,
+    Orientation, PolicyType, ScrolledWindow,
 };
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::RefCell;
@@ -49,10 +49,15 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
     list_box.add_css_class("yeet-list");
 
     let list_height = config.appearance.row_height * config.general.max_results as i32;
-    list_box.set_size_request(-1, list_height);
+    let scrolled = ScrolledWindow::builder()
+        .hscrollbar_policy(PolicyType::Never)
+        .vscrollbar_policy(PolicyType::Automatic)
+        .child(&list_box)
+        .build();
+    scrolled.set_size_request(-1, list_height);
 
     vbox.append(&entry);
-    vbox.append(&list_box);
+    vbox.append(&scrolled);
     window.set_child(Some(&vbox));
 
     let apps = Rc::new(apps);
@@ -335,7 +340,8 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
 }
 
 /// Indices shown before any query: favorites first, then most recently
-/// launched, then the pre-sorted (alphabetical) order.
+/// launched, then the pre-sorted (alphabetical) order. `count == 0` means
+/// show everything (scrollable full list).
 fn initial_indices(apps: &[App], history: &HashMap<String, u64>, count: usize) -> Vec<usize> {
     let mut indices: Vec<usize> = (0..apps.len()).collect();
     if !history.is_empty() {
@@ -346,7 +352,9 @@ fn initial_indices(apps: &[App], history: &HashMap<String, u64>, count: usize) -
             )
         });
     }
-    indices.truncate(count);
+    if count > 0 {
+        indices.truncate(count);
+    }
     indices
 }
 
@@ -424,6 +432,9 @@ fn select_first(list_box: &ListBox) {
     if let Some(row) = list_box.row_at_index(0) {
         list_box.select_row(Some(&row));
     }
+    if let Some(adj) = list_box.adjustment() {
+        adj.set_value(0.0);
+    }
 }
 
 fn move_selection(list_box: &ListBox, delta: i32) {
@@ -431,6 +442,22 @@ fn move_selection(list_box: &ListBox, delta: i32) {
     let new_idx = (current + delta).max(0);
     if let Some(row) = list_box.row_at_index(new_idx) {
         list_box.select_row(Some(&row));
+        scroll_row_into_view(list_box, &row);
+    }
+}
+
+fn scroll_row_into_view(list_box: &ListBox, row: &ListBoxRow) {
+    let Some(adj) = list_box.adjustment() else {
+        return;
+    };
+    let alloc = row.allocation();
+    let row_top = alloc.y() as f64;
+    let row_bottom = row_top + alloc.height() as f64;
+
+    if row_top < adj.value() {
+        adj.set_value(row_top);
+    } else if row_bottom > adj.value() + adj.page_size() {
+        adj.set_value(row_bottom - adj.page_size());
     }
 }
 
@@ -492,6 +519,13 @@ mod tests {
 
         let indices = initial_indices(&apps, &history, 2);
         assert_eq!(indices, vec![0, 2]);
+    }
+
+    #[test]
+    fn initial_indices_zero_count_shows_all() {
+        let apps = plain_apps(&["a", "b", "c"]);
+        let indices = initial_indices(&apps, &HashMap::new(), 0);
+        assert_eq!(indices, vec![0, 1, 2]);
     }
 
     #[test]
