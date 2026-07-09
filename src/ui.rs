@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::desktop::{launch_app, App};
+use crate::desktop::App;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use gtk4::gdk::{Display, ModifierType};
@@ -16,7 +16,7 @@ use std::rc::Rc;
 
 const DEFAULT_STYLE: &str = include_str!("../defaults/style.css");
 
-pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
+pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>, on_select: Rc<dyn Fn(&App)>) {
     load_css();
 
     let window = ApplicationWindow::builder()
@@ -88,7 +88,6 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
     let min_score = config.search.min_score;
     let score_threshold = config.search.score_threshold;
     let prefer_prefix = config.search.prefer_prefix;
-    let terminal = config.general.terminal.clone();
     let show_shortcuts = config.appearance.show_shortcuts;
     let show_descriptions = config.appearance.show_descriptions;
     let use_history = config.search.use_history;
@@ -209,21 +208,28 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
         });
     }
 
+    let activate_selection = {
+        let apps = apps.clone();
+        let filtered_apps = filtered_apps.clone();
+        let window = window.clone();
+        let on_select = on_select.clone();
+
+        Rc::new(move |row_idx: usize| {
+            let app_idx = filtered_apps.borrow().get(row_idx).copied();
+            if let Some(app_idx) = app_idx {
+                on_select(&apps[app_idx]);
+                window.close();
+            }
+        })
+    };
+
     {
-        let list_box_enter = list_box.clone();
-        let apps_enter = apps.clone();
-        let filtered_enter = filtered_apps.clone();
-        let window_enter = window.clone();
-        let terminal_enter = terminal.clone();
+        let list_box = list_box.clone();
+        let activate = activate_selection.clone();
 
         entry.connect_activate(move |_| {
-            if let Some(row) = list_box_enter.selected_row() {
-                let idx = row.index() as usize;
-                let filtered = filtered_enter.borrow();
-                if let Some(&app_idx) = filtered.get(idx) {
-                    launch_app(&apps_enter[app_idx], &terminal_enter);
-                    window_enter.close();
-                }
+            if let Some(row) = list_box.selected_row() {
+                activate(row.index() as usize);
             }
         });
     }
@@ -231,9 +237,7 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
     {
         let list_box_nav = list_box.clone();
         let window_close = window.clone();
-        let apps_shortcut = apps.clone();
-        let filtered_shortcut = filtered_apps.clone();
-        let terminal_shortcut = terminal.clone();
+        let activate = activate_selection.clone();
 
         let scroll_controller =
             gtk4::EventControllerScroll::new(gtk4::EventControllerScrollFlags::VERTICAL);
@@ -287,12 +291,8 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
                 };
 
                 if let Some(idx) = num {
-                    let filtered = filtered_shortcut.borrow();
-                    if let Some(&app_idx) = filtered.get(idx) {
-                        launch_app(&apps_shortcut[app_idx], &terminal_shortcut);
-                        window_close.close();
-                        return gtk4::glib::Propagation::Stop;
-                    }
+                    activate(idx);
+                    return gtk4::glib::Propagation::Stop;
                 }
             }
 
@@ -321,17 +321,9 @@ pub fn build_ui(app: &Application, config: &Config, apps: Vec<App>) {
     }
 
     {
-        let apps_click = apps.clone();
-        let filtered_click = filtered_apps.clone();
-        let window_click = window.clone();
-
+        let activate = activate_selection.clone();
         list_box.connect_row_activated(move |_, row| {
-            let idx = row.index() as usize;
-            let filtered = filtered_click.borrow();
-            if let Some(&app_idx) = filtered.get(idx) {
-                launch_app(&apps_click[app_idx], &terminal);
-                window_click.close();
-            }
+            activate(row.index() as usize);
         });
     }
 
