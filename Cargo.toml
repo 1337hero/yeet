@@ -33,9 +33,12 @@ strip = true
 panic = "abort"
 
 [package.metadata.deb]
+maintainer = "Mike Key <mike@mk3y.com>"
 section = "utils"
 priority = "optional"
+depends = "libgtk-4-1, libgtk4-layer-shell0"
+extended-description = "A fast, minimal, configurable app launcher for Wayland compositors (Hyprland, Sway, and other wlroots-based compositors, plus KDE Plasma). Fuzzy search with launch-history ranking, TOML/CSS configuration, and a dmenu mode."
 assets = [
     ["target/release/yeet", "usr/bin/", "755"],
-    ["README.md", "usr/share/doc/yeet/", "644"],
+    ["README.md", "usr/share/doc/yeet-launcher/", "644"],
 ]

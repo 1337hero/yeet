@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to (re)build release assets for'
+        required: true
 
 permissions:
   contents: write
@@ -15,8 +20,12 @@ jobs:
   build:
     name: Build Release Binary
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Install GTK4 dependencies
         run: |
@@ -47,12 +56,20 @@ jobs:
           cp target/release/yeet release/
           cp README.md release/ || true
           cp LICENSE release/ || true
-          tar -czvf yeet-${{ github.ref_name }}-linux-x86_64.tar.gz -C release .
+          tar -czvf yeet-$TAG-linux-x86_64.tar.gz -C release .
+
+      - name: Build .deb
+        run: |
+          cargo install cargo-deb
+          cargo deb --no-build
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: yeet-*.tar.gz
+          tag_name: ${{ env.TAG }}
+          files: |
+            yeet-*.tar.gz
+            target/debian/*.deb
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
