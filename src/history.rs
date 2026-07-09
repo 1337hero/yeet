@@ -87,9 +87,9 @@ pub fn trim_history(max_lines: usize) {
             return Ok(());
         }
 
-        entries.sort_by(|a, b| b.0.cmp(&a.0));
+        entries.sort_by_key(|&(ts, _)| std::cmp::Reverse(ts));
         entries.truncate(max_lines);
-        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        entries.sort_by_key(|&(ts, _)| ts);
 
         let (temp_path, mut file) = create_temp_history_file(&path)?;
         for (ts, name) in entries {
@@ -220,9 +220,9 @@ mod tests {
 
         assert_eq!(entries.len(), 10);
 
-        entries.sort_by(|a, b| b.0.cmp(&a.0));
+        entries.sort_by_key(|&(ts, _)| std::cmp::Reverse(ts));
         entries.truncate(5);
-        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        entries.sort_by_key(|&(ts, _)| ts);
 
         let mut file = fs::File::create(&path).unwrap();
         for (ts, name) in &entries {
