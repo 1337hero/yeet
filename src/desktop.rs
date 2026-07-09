@@ -1,5 +1,6 @@
 use crate::config::{Config, CustomApp};
-use freedesktop_desktop_entry::{DesktopEntry, Iter as DesktopIter};
+use freedesktop_desktop_entry::{get_languages_from_env, DesktopEntry, Iter as DesktopIter};
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
@@ -12,11 +13,11 @@ enum LaunchCommand {
 #[derive(Debug, Clone)]
 pub struct App {
     pub name: String,
-    pub exec: String,
     pub icon: Option<String>,
     pub description: Option<String>,
     pub keywords: Vec<String>,
     pub terminal: bool,
+    pub favorite: bool,
     launch: LaunchCommand,
 }
 
@@ -24,46 +25,48 @@ impl App {
     fn from_custom(custom: &CustomApp) -> Self {
         Self {
             name: custom.name.clone(),
-            exec: custom.exec.clone(),
             icon: custom.icon.clone(),
             description: None,
             keywords: custom.keywords.clone(),
             terminal: false,
+            favorite: false,
             launch: LaunchCommand::Shell(custom.exec.clone()),
         }
     }
 
-    pub fn search_text(&self) -> String {
-        let mut text = self.name.clone();
-        if let Some(desc) = &self.description {
-            text.push(' ');
-            text.push_str(desc);
+    /// A bare item with a name only; used in tests.
+    #[cfg(test)]
+    pub fn plain(name: String) -> Self {
+        Self {
+            launch: LaunchCommand::Shell(name.clone()),
+            name,
+            icon: None,
+            description: None,
+            keywords: Vec::new(),
+            terminal: false,
+            favorite: false,
         }
-        for kw in &self.keywords {
-            text.push(' ');
-            text.push_str(kw);
-        }
-        text
     }
 }
 
 pub fn discover_apps(config: &Config) -> Vec<App> {
     let mut apps = Vec::new();
-    let exclude_set: std::collections::HashSet<&str> =
-        config.apps.exclude.iter().map(|s| s.as_str()).collect();
+    let exclude_set: HashSet<&str> = config.apps.exclude.iter().map(|s| s.as_str()).collect();
 
     let all_dirs: Vec<PathBuf> = xdg_application_dirs()
         .into_iter()
         .chain(config.apps.extra_dirs.iter().cloned())
         .collect();
 
+    let locales = get_languages_from_env();
+
     for path in DesktopIter::new(all_dirs.into_iter()) {
-        if let Ok(entry) = DesktopEntry::from_path(&path, Some(&["en"])) {
+        if let Ok(entry) = DesktopEntry::from_path(&path, Some(&locales)) {
             if entry.no_display() || entry.hidden() {
                 continue;
             }
 
-            let Some(name) = entry.name(&["en"]) else {
+            let Some(name) = entry.name(&locales) else {
                 continue;
             };
             let exec_args = match entry.parse_exec() {
@@ -75,20 +78,18 @@ pub fn discover_apps(config: &Config) -> Vec<App> {
                 continue;
             }
 
-            let app = App {
+            apps.push(App {
                 name: name.to_string(),
-                exec: exec_args.join(" "),
                 icon: entry.icon().map(|s| s.to_string()),
-                description: entry.comment(&["en"]).map(|s| s.to_string()),
+                description: entry.comment(&locales).map(|s| s.to_string()),
                 keywords: entry
-                    .keywords(&["en"])
+                    .keywords(&locales)
                     .map(|kws| kws.into_iter().map(|s| s.to_string()).collect())
                     .unwrap_or_default(),
                 terminal: entry.terminal(),
+                favorite: false,
                 launch: LaunchCommand::Direct(exec_args),
-            };
-
-            apps.push(app);
+            });
         }
     }
 
@@ -96,18 +97,12 @@ pub fn discover_apps(config: &Config) -> Vec<App> {
         apps.push(App::from_custom(custom));
     }
 
-    let favorites_set: std::collections::HashSet<&str> =
-        config.apps.favorites.iter().map(|s| s.as_str()).collect();
+    let favorites_set: HashSet<&str> = config.apps.favorites.iter().map(|s| s.as_str()).collect();
+    for app in &mut apps {
+        app.favorite = favorites_set.contains(app.name.as_str());
+    }
 
-    apps.sort_by(|a, b| {
-        let a_fav = favorites_set.contains(a.name.as_str());
-        let b_fav = favorites_set.contains(b.name.as_str());
-        match (a_fav, b_fav) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-        }
-    });
+    apps.sort_by_cached_key(|a| (!a.favorite, a.name.to_lowercase()));
 
     apps
 }

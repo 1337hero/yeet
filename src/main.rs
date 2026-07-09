@@ -1,12 +1,11 @@
-#![allow(dead_code)]
-
 mod config;
 mod desktop;
-pub mod history;
+mod history;
 mod ui;
 
 use config::Config;
 use desktop::discover_apps;
+use gtk4::gio::ApplicationFlags;
 use gtk4::prelude::*;
 use gtk4::Application;
 
@@ -17,7 +16,12 @@ fn main() {
 
     let apps = discover_apps(&config);
 
-    let app = Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: launching yeet while a window is already open gets its own
+    // instance instead of stacking a second window inside the first one.
+    let app = Application::builder()
+        .application_id(APP_ID)
+        .flags(ApplicationFlags::NON_UNIQUE)
+        .build();
 
     app.connect_activate(move |app| {
         ui::build_ui(app, &config, apps.clone());
